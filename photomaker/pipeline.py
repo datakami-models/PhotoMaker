@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from collections import OrderedDict
 import os
 import PIL
-import numpy as np 
+import numpy as np
 
 import torch
 from torchvision import transforms as T
@@ -57,9 +57,9 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
                 The subfolder location of a model file within a larger model repository on the Hub or locally.
 
             trigger_word (`str`, *optional*, defaults to `"img"`):
-                The trigger word is used to identify the position of class word in the text prompt, 
-                and it is recommended not to set it as a common word. 
-                This trigger word must be placed after the class word when used, otherwise, it will affect the performance of the personalized generation.           
+                The trigger word is used to identify the position of class word in the text prompt,
+                and it is recommended not to set it as a common word.
+                This trigger word must be placed after the class word when used, otherwise, it will affect the performance of the personalized generation.
         """
 
         # Load the main state dict first.
@@ -112,7 +112,7 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
         print(f"Loading PhotoMaker components [1] id_encoder from [{pretrained_model_name_or_path_or_dict}]...")
         id_encoder = PhotoMakerIDEncoder()
         id_encoder.load_state_dict(state_dict["id_encoder"], strict=True)
-        id_encoder = id_encoder.to(self.device, dtype=self.unet.dtype)    
+        id_encoder = id_encoder.to(self.device, dtype=self.unet.dtype)
         self.id_encoder = id_encoder
         self.id_image_processor = CLIPImageProcessor()
 
@@ -121,11 +121,11 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
         self.load_lora_weights(state_dict["lora_weights"], adapter_name="photomaker")
 
         # Add trigger word token
-        if self.tokenizer is not None: 
+        if self.tokenizer is not None:
             self.tokenizer.add_tokens([self.trigger_word], special_tokens=True)
-        
+
         self.tokenizer_2.add_tokens([self.trigger_word], special_tokens=True)
-        
+
 
     def encode_prompt_with_trigger_word(
         self,
@@ -182,8 +182,8 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
                 # Expand the class word token and corresponding mask
                 class_token = clean_input_ids[class_token_index]
                 clean_input_ids = clean_input_ids[:class_token_index] + [class_token] * num_id_images + \
-                    clean_input_ids[class_token_index+1:]                
-                    
+                    clean_input_ids[class_token_index+1:]
+
                 # Truncation or padding
                 max_len = tokenizer.model_max_length
                 if len(clean_input_ids) > max_len:
@@ -195,10 +195,10 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
 
                 class_tokens_mask = [True if class_token_index <= i < class_token_index+num_id_images else False \
                      for i in range(len(clean_input_ids))]
-                
+
                 clean_input_ids = torch.tensor(clean_input_ids, dtype=torch.long).unsqueeze(0)
                 class_tokens_mask = torch.tensor(class_tokens_mask, dtype=torch.bool).unsqueeze(0)
-                
+
                 prompt_embeds = text_encoder(
                     clean_input_ids.to(device),
                     output_hidden_states=True,
@@ -255,11 +255,11 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
     ):
         r"""
         Function invoked when calling the pipeline for generation.
-        Only the parameters introduced by PhotoMaker are discussed here. 
+        Only the parameters introduced by PhotoMaker are discussed here.
         For explanations of the previous parameters in StableDiffusionXLPipeline, please refer to https://github.com/huggingface/diffusers/blob/v0.25.0/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py
 
         Args:
-            input_id_images (`PipelineImageInput`, *optional*): 
+            input_id_images (`PipelineImageInput`, *optional*):
                 Input ID Image to work with PhotoMaker.
             class_tokens_mask (`torch.LongTensor`, *optional*):
                 Pre-generated class token. When the `prompt_embeds` parameter is provided in advance, it is necessary to prepare the `class_tokens_mask` beforehand for marking out the position of class word.
@@ -296,7 +296,7 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
             pooled_prompt_embeds,
             negative_pooled_prompt_embeds,
         )
-        #        
+        #
         if prompt_embeds is not None and class_tokens_mask is None:
             raise ValueError(
                 "If `prompt_embeds` are provided, `class_tokens_mask` also have to be passed. Make sure to generate `class_tokens_mask` from the same tokenizer that was used to generate `prompt_embeds`."
@@ -328,7 +328,7 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         # 3. Encode input prompt
         num_id_images = len(input_id_images)
-        
+
         (
             prompt_embeds,
             pooled_prompt_embeds,
@@ -342,7 +342,7 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
             pooled_prompt_embeds=pooled_prompt_embeds,
             class_tokens_mask=class_tokens_mask,
         )
-        
+
         # 4. Encode input prompt without the trigger word for delayed conditioning
         # encode, remove trigger word token, then decode
         tokens_text_only = self.tokenizer.encode(prompt, add_special_tokens=False)
@@ -377,7 +377,7 @@ class PhotoMakerStableDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         # 6. Get the update text embedding with the stacked ID embedding
         prompt_embeds = self.id_encoder(id_pixel_values, prompt_embeds, class_tokens_mask)
-        
+
         bs_embed, seq_len, _ = prompt_embeds.shape
         # duplicate text embeddings for each generation per prompt, using mps friendly method
         prompt_embeds = prompt_embeds.repeat(1, num_images_per_prompt, 1)
