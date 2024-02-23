@@ -133,11 +133,17 @@ class Predictor(BasePredictor):
         num_steps: int = Input(
             description="Number of sample steps", default=20, ge=1, le=100
         ),
+        width: int = Input(
+            description="Output image width", default=1024
+        ),
+        height: int = Input(
+            description="Output image height", default=1024
+        ),
         style_strength_ratio: float = Input(
             description="Style strength (%)", default=20, ge=15, le=50
         ),
         num_outputs: int = Input(
-            description="Number of output images", default=1, ge=1, le=4
+            description="Number of output images", default=1, ge=1, le=10
         ),
         guidance_scale: float = Input(
             description="Guidance scale. A guidance scale of 1 corresponds to doing no classifier free guidance.", default=5, ge=1, le=10.0
@@ -202,9 +208,11 @@ class Predictor(BasePredictor):
         print(f"Start merge step: {start_merge_step}")
         images = self.pipe(
             prompt=prompt,
+            width=width,
+            height=height,
             input_id_images=input_id_images,
             negative_prompt=negative_prompt,
-            num_images_per_prompt=num_outputs, 
+            num_images_per_prompt=num_outputs,
             num_inference_steps=num_steps,
             start_merge_step=start_merge_step,
             generator=generator,
